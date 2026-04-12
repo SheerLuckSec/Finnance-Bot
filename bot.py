@@ -5,6 +5,9 @@ import pytz
 from datetime import datetime, time
 import os
 from dotenv import load_dotenv
+import matplotlib.pyplot as plt
+import io
+
 
 # Load environment variables
 load_dotenv()
@@ -77,5 +80,53 @@ async def daily_report():
 async def report(ctx):
     report = await get_market_report()
     await ctx.send(report)
+
+@bot.command()
+async def graph(ctx, asset: str):
+    # Map user-friendly names to yfinance tickers
+    tickers = {
+        "btc": "BTC-USD",
+        "eth": "ETH-USD",
+        "sp500": "^GSPC",
+        "nasdaq": "^IXIC",
+        "dow": "^DJI"
+    }
+
+    asset = asset.lower()
+
+    if asset not in tickers:
+        await ctx.send("❌ Unknown asset. Try: btc, eth, sp500, nasdaq, dow")
+        return
+
+    symbol = tickers[asset]
+
+    try:
+        data = yf.Ticker(symbol).history(period="30d")
+
+        if data.empty:
+            await ctx.send("❌ No data available for that asset.")
+            return
+
+        # Create the plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(data.index, data["Close"], label=f"{asset.upper()} Price", color="cyan")
+        plt.title(f"{asset.upper()} — 30 Day Price Chart")
+        plt.xlabel("Date")
+        plt.ylabel("Price")
+        plt.grid(True)
+        plt.legend()
+
+        # Save plot to memory
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format="png")
+        buffer.seek(0)
+        plt.close()
+
+        # Send image to Discord
+        await ctx.send(file=discord.File(buffer, filename=f"{asset}_chart.png"))
+
+    except Exception as e:
+        await ctx.send(f"❌ Error generating chart: {str(e)}")
+
 
 bot.run(DISCORD_TOKEN)

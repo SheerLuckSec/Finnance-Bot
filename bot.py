@@ -108,6 +108,7 @@ async def graph(ctx, asset: str):
             return
 
         # Create the plot
+        plt.style.use("dark_background")
         plt.figure(figsize=(10, 5))
         plt.plot(data.index, data["Close"], label=f"{asset.upper()} Price", color="cyan")
         plt.title(f"{asset.upper()} — 30 Day Price Chart")

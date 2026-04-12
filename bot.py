@@ -14,7 +14,13 @@ TIMEZONE = os.getenv("TIMEZONE", "America/Toronto")
 POST_HOUR = int(os.getenv("POST_HOUR", 9))
 POST_MINUTE = int(os.getenv("POST_MINUTE", 0))
 
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.default())
+# FIXED INTENTS
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+intents.guilds = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Function to fetch market data
 async def get_market_report():

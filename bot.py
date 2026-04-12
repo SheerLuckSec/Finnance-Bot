@@ -2,12 +2,11 @@ import discord
 from discord.ext import commands, tasks
 import yfinance as yf
 import pytz
-from datetime import datetime, time
+from datetime import datetime
 import os
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 import io
-
 
 # Load environment variables
 load_dotenv()
@@ -25,7 +24,10 @@ intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Function to fetch market data
+# ============================================================
+#  MARKET REPORT SYSTEM (your original code)
+# ============================================================
+
 async def get_market_report():
     tickers = {
         "S&P 500": "^GSPC",
@@ -52,7 +54,6 @@ async def get_market_report():
         except Exception as e:
             report += f"{name}: Error fetching data ({str(e)})\n"
 
-    # Add timestamp
     tz = pytz.timezone(TIMEZONE)
     now = datetime.now(tz)
     report += f"\n*Report generated at {now.strftime('%Y-%m-%d %H:%M:%S %Z')}*"
@@ -61,9 +62,8 @@ async def get_market_report():
 @bot.event
 async def on_ready():
     print(f'Bot is ready. Logged in as {bot.user}')
-    daily_report.start()  # Start the scheduled task
+    daily_report.start()
 
-# Scheduled daily report task
 @tasks.loop(minutes=1)
 async def daily_report():
     tz = pytz.timezone(TIMEZONE)
@@ -75,7 +75,6 @@ async def daily_report():
             report = await get_market_report()
             await channel.send(report)
 
-# Manual command
 @bot.command()
 async def report(ctx):
     report = await get_market_report()
@@ -83,7 +82,6 @@ async def report(ctx):
 
 @bot.command()
 async def graph(ctx, asset: str):
-    # Map user-friendly names to yfinance tickers
     tickers = {
         "btc": "BTC-USD",
         "eth": "ETH-USD",
@@ -107,7 +105,6 @@ async def graph(ctx, asset: str):
             await ctx.send("❌ No data available for that asset.")
             return
 
-        # Create the plot
         plt.style.use("dark_background")
         plt.figure(figsize=(10, 5))
         plt.plot(data.index, data["Close"], label=f"{asset.upper()} Price", color="cyan")
@@ -117,17 +114,179 @@ async def graph(ctx, asset: str):
         plt.grid(True)
         plt.legend()
 
-        # Save plot to memory
         buffer = io.BytesIO()
         plt.savefig(buffer, format="png")
         buffer.seek(0)
         plt.close()
 
-        # Send image to Discord
         await ctx.send(file=discord.File(buffer, filename=f"{asset}_chart.png"))
 
     except Exception as e:
         await ctx.send(f"❌ Error generating chart: {str(e)}")
 
+
+# ============================================================
+#  ONBOARDING SYSTEM (verification + roles + logging)
+# ============================================================
+
+VERIFY_CHANNEL = "les-portes-chaudes"
+WELCOME_CHANNEL = "welcome"
+LOG_CHANNEL = "logs-channel"
+
+BASE_ROLE = "Mercs"
+
+ROLE_OPTIONS = {
+    "Coding": "💻",
+    "Finances": "💰",
+    "RealEstate": "🏠",
+    "Gaming": "🎮",
+    "Soulsbornes": "🐉"
+}
+
+GUIDELINES = [
+    "Be respectful — don’t be a dick.",
+    "Keep discussions in the right channels.",
+    "No harassment or hate speech.",
+    "No spam or self-promo unless allowed.",
+    "Have fun and don’t take things too seriously."
+]
+
+async def log_action(guild, message):
+    channel = discord.utils.get(guild.channels, name=LOG_CHANNEL)
+    if channel:
+        await channel.send(message)
+
+# ------------------ Verification Button ------------------
+
+class VerifyButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="Verify", style=discord.ButtonStyle.success, emoji="✅")
+
+    async def callback(self, interaction: discord.Interaction):
+        role = discord.utils.get(interaction.guild.roles, name=BASE_ROLE)
+        if role:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message(
+                "You are now verified and have access to the server!", ephemeral=True
+            )
+            await log_action(interaction.guild, f"{interaction.user} verified and received {BASE_ROLE}.")
+        else:
+            await interaction.response.send_message(
+                "Base role not found. Contact an admin.", ephemeral=True
+            )
+
+        try:
+            await interaction.user.send("Welcome to the server! Froggy is watching 🐸")
+        except:
+            pass
+
+class VerifyView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(VerifyButton())
+
+# ------------------ Role Buttons ------------------
+
+class RoleButton(discord.ui.Button):
+    def __init__(self, role_name, emoji):
+        super().__init__(label=role_name, emoji=emoji, style=discord.ButtonStyle.primary)
+        self.role_name = role_name
+
+    async def callback(self, interaction: discord.Interaction):
+        role = discord.utils.get(interaction.guild.roles, name=self.role_name)
+
+        if role in interaction.user.roles:
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message(
+                f"Removed **{self.role_name}**", ephemeral=True
+            )
+            await log_action(interaction.guild, f"{interaction.user} removed role {self.role_name}.")
+        else:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message(
+                f"Added **{self.role_name}**", ephemeral=True
+            )
+            await log_action(interaction.guild, f"{interaction.user} added role {self.role_name}.")
+
+class RemoveAllButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="Remove All Roles", style=discord.ButtonStyle.danger, emoji="🗑️")
+
+    async def callback(self, interaction: discord.Interaction):
+        for role_name in ROLE_OPTIONS.keys():
+            role = discord.utils.get(interaction.guild.roles, name=role_name)
+            if role and role in interaction.user.roles:
+                await interaction.user.remove_roles(role)
+
+        await interaction.response.send_message("All optional roles removed.", ephemeral=True)
+        await log_action(interaction.guild, f"{interaction.user} removed ALL optional roles.")
+
+class RoleView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        for role, emoji in ROLE_OPTIONS.items():
+            self.add_item(RoleButton(role, emoji))
+        self.add_item(RemoveAllButton())
+
+# ------------------ Welcome Embed ------------------
+
+def build_welcome_embed():
+    embed = discord.Embed(
+        title="🐸 Welcome to the Server!",
+        description="Choose the roles you want below.\n\n**General Guidelines:**",
+        color=0x00ff7f
+    )
+    for rule in GUIDELINES:
+        embed.add_field(name="•", value=rule, inline=False)
+    embed.set_footer(text="Froggy is watching. Be nice.")
+    return embed
+
+# ------------------ Events ------------------
+
+@bot.event
+async def on_member_join(member):
+    verify_channel = discord.utils.get(member.guild.channels, name=VERIFY_CHANNEL)
+    if verify_channel:
+        await verify_channel.send(
+            f"Welcome {member.mention}! Please verify to enter the server.",
+            view=VerifyView()
+        )
+
+    try:
+        await member.send("Welcome! Head to the verify channel to enter the server 🐸")
+    except:
+        pass
+
+# ------------------ Commands ------------------
+
+@bot.command()
+async def sendroles(ctx):
+    if ctx.channel.name != WELCOME_CHANNEL:
+        return await ctx.send("Use this command in the welcome channel.")
+
+    embed = build_welcome_embed()
+    await ctx.send(embed=embed, view=RoleView())
+
+@bot.command()
+@commands.has_permissions(manage_roles=True)
+async def rolereset(ctx, member: discord.Member):
+    optional_roles = list(ROLE_OPTIONS.keys())
+    removed = []
+
+    for role_name in optional_roles:
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        if role and role in member.roles:
+            await member.remove_roles(role)
+            removed.append(role.name)
+
+    if removed:
+        await ctx.send(f"Removed roles from {member.mention}: {', '.join(removed)}")
+        await log_action(ctx.guild, f"{ctx.author} reset roles for {member}: {', '.join(removed)}")
+    else:
+        await ctx.send(f"{member.mention} had no optional roles to reset.")
+
+# ============================================================
+#  RUN BOT
+# ============================================================
 
 bot.run(DISCORD_TOKEN)

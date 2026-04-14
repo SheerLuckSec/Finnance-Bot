@@ -62,7 +62,10 @@ async def get_market_report():
 @bot.event
 async def on_ready():
     print(f'Bot is ready. Logged in as {bot.user}')
+    bot.add_view(RoleView())     # <-- REQUIRED for role buttons
+    bot.add_view(VerifyView())   # <-- REQUIRED for verify button
     daily_report.start()
+
 
 @tasks.loop(minutes=1)
 async def daily_report():

@@ -62,8 +62,9 @@ async def get_market_report():
 @bot.event
 async def on_ready():
     print(f'Bot is ready. Logged in as {bot.user}')
-    bot.add_view(RoleView())     # <-- REQUIRED for role buttons
-    bot.add_view(VerifyView())   # <-- REQUIRED for verify button
+    bot.add_view(RoleView())        # role buttons (selection menu)
+    bot.add_view(VerifyView())      # verify button
+    bot.add_view(ChooseRolesView()) # "Choose your roles" button (persistent)
     daily_report.start()
 
 
@@ -224,24 +225,98 @@ class RemoveAllButton(discord.ui.Button):
         await interaction.response.send_message("All optional roles removed.", ephemeral=True)
         await log_action(interaction.guild, f"{interaction.user} removed ALL optional roles.")
 
+# ------------------ Role Selection View (second rectangle) ------------------
+
 class RoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        for role, emoji in ROLE_OPTIONS.items():
-            self.add_item(RoleButton(role, emoji))
-        self.add_item(RemoveAllButton())
 
-# ------------------ Welcome Embed ------------------
+        # Coding (row 0)
+        coding = RoleButton("Coding", ROLE_OPTIONS["Coding"])
+        coding.row = 0
+        self.add_item(coding)
+
+        # Finances (row 1)
+        finances = RoleButton("Finances", ROLE_OPTIONS["Finances"])
+        finances.row = 1
+        self.add_item(finances)
+
+        # RealEstate (row 2)
+        realestate = RoleButton("RealEstate", ROLE_OPTIONS["RealEstate"])
+        realestate.row = 2
+        self.add_item(realestate)
+
+        # Gaming + SoulsBornes on same row (row 3)
+        gaming = RoleButton("Gaming", ROLE_OPTIONS["Gaming"])
+        gaming.row = 3
+        self.add_item(gaming)
+
+        souls = RoleButton("SoulsBornes", ROLE_OPTIONS["SoulsBornes"])
+        souls.row = 3
+        self.add_item(souls)
+
+        # Remove All Roles at bottom (row 4)
+        remove_all = RemoveAllButton()
+        remove_all.row = 4
+        self.add_item(remove_all)
+
+# ------------------ "Choose your roles" Button + View ------------------
+
+class ChooseRolesButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label="Choose your roles",
+            style=discord.ButtonStyle.primary,
+            emoji="🐸",
+            custom_id="choose_roles_button"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        embed = build_role_selection_embed()
+        await interaction.response.send_message(embed=embed, view=RoleView(), ephemeral=False)
+
+class ChooseRolesView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(ChooseRolesButton())
+
+# ------------------ Embeds ------------------
 
 def build_welcome_embed():
+    # Welcome rectangle with guidelines + "Now choose your roles."
+    description = "Choose the roles you want below.\n\n**General Guidelines:**\n"
+    for rule in GUIDELINES:
+        description += f"• {rule}\n"
+    description += "\n**Now choose your roles.**\n"
+
     embed = discord.Embed(
         title="🐸 Welcome to the Server!",
-        description="Choose the roles you want below.\n\n**General Guidelines:**",
+        description=description,
         color=0x00ff7f
     )
-    for rule in GUIDELINES:
-        embed.add_field(name="•", value=rule, inline=False)
     embed.set_footer(text="Froggy is watching. Be nice.")
+    return embed
+
+def build_role_selection_embed():
+    # Second rectangle: role selection layout
+    desc = (
+        "━━━━━━━━━━━━━━━━ WELCOME TO THE ROLE SELECTIONS ━━━━━━━━━━━━━━━━\n"
+        "Choose the categories that fit you best.\n\n"
+        "💻 ━━━━━━━━━━━━━━━ CODING ━━━━━━━━━━━━━━━ 💻\n"
+        "A place for programming, scripts, automation, and tech talk.\n\n"
+        "💰 ━━━━━━━━━━━━━━━ FINANCES ━━━━━━━━━━━━━━━ 💰\n"
+        "Money, markets, budgeting, investing — all the number-brain stuff.\n\n"
+        "🏠 ━━━━━━━━━━━━━━━ REAL ESTATE ━━━━━━━━━━━━━━━ 🏠\n"
+        "Property, mortgages, rentals, flipping, and long-term wealth building.\n\n"
+        "🎮 ━━━━━━━━━━━━━━━ GAMING ━━━━━━━━━━━━━━━ 🎮\n"
+        "General gaming discussions, builds, setups, and recommendations.\n"
+        "SoulsBornes lives under Gaming as a special role.\n"
+    )
+
+    embed = discord.Embed(
+        description=desc,
+        color=0x2b2d31
+    )
     return embed
 
 # ------------------ Events ------------------
@@ -268,7 +343,8 @@ async def sendroles(ctx):
         return await ctx.send("Use this command in the welcome channel.")
 
     embed = build_welcome_embed()
-    await ctx.send(embed=embed, view=RoleView())
+    # First message: welcome + "Choose your roles" button
+    await ctx.send(embed=embed, view=ChooseRolesView())
 
 @bot.command()
 @commands.has_permissions(manage_roles=True)
@@ -293,3 +369,4 @@ async def rolereset(ctx, member: discord.Member):
 # ============================================================
 
 bot.run(DISCORD_TOKEN)
+

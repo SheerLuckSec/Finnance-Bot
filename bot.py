@@ -271,7 +271,7 @@ class ChooseRolesButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         embed = build_role_selection_embed()
-        await interaction.response.send_message(embed=embed, view=RoleView(), ephemeral=False)
+        await interaction.response.send_message(embed=embed, view=RoleView(), ephemeral=True)
 
 class ChooseRolesView(discord.ui.View):
     def __init__(self):

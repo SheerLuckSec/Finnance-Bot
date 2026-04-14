@@ -140,7 +140,7 @@ ROLE_OPTIONS = {
     "Finances": "💰",
     "RealEstate": "🏠",
     "Gaming": "🎮",
-    "Soulsbornes": "🐉"
+    "SoulsBornes": "🐉"
 }
 
 GUIDELINES = [

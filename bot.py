@@ -231,33 +231,31 @@ class RoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-        # Coding (row 0)
+        # Row 0 — ALL MAIN ROLES HORIZONTAL
         coding = RoleButton("Coding", ROLE_OPTIONS["Coding"])
         coding.row = 0
         self.add_item(coding)
 
-        # Finances (row 1)
         finances = RoleButton("Finances", ROLE_OPTIONS["Finances"])
-        finances.row = 1
+        finances.row = 0
         self.add_item(finances)
 
-        # RealEstate (row 2)
         realestate = RoleButton("RealEstate", ROLE_OPTIONS["RealEstate"])
-        realestate.row = 2
+        realestate.row = 0
         self.add_item(realestate)
 
-        # Gaming + SoulsBornes on same row (row 3)
         gaming = RoleButton("Gaming", ROLE_OPTIONS["Gaming"])
-        gaming.row = 3
+        gaming.row = 0
         self.add_item(gaming)
 
+        # Row 1 — SoulsBornes centered under Gaming
         souls = RoleButton("SoulsBornes", ROLE_OPTIONS["SoulsBornes"])
-        souls.row = 3
+        souls.row = 1
         self.add_item(souls)
 
-        # Remove All Roles at bottom (row 4)
+        # Row 2 — Remove All Roles centered under everything
         remove_all = RemoveAllButton()
-        remove_all.row = 4
+        remove_all.row = 2
         self.add_item(remove_all)
 
 # ------------------ "Choose your roles" Button + View ------------------
@@ -283,7 +281,6 @@ class ChooseRolesView(discord.ui.View):
 # ------------------ Embeds ------------------
 
 def build_welcome_embed():
-    # Welcome rectangle with guidelines + "Now choose your roles."
     description = "Choose the roles you want below.\n\n**General Guidelines:**\n"
     for rule in GUIDELINES:
         description += f"• {rule}\n"
@@ -298,7 +295,6 @@ def build_welcome_embed():
     return embed
 
 def build_role_selection_embed():
-    # Second rectangle: role selection layout
     desc = (
         "━━━━━━━━━━━━━━━━ WELCOME TO THE ROLE SELECTIONS ━━━━━━━━━━━━━━━━\n"
         "Choose the categories that fit you best.\n\n"
@@ -343,7 +339,6 @@ async def sendroles(ctx):
         return await ctx.send("Use this command in the welcome channel.")
 
     embed = build_welcome_embed()
-    # First message: welcome + "Choose your roles" button
     await ctx.send(embed=embed, view=ChooseRolesView())
 
 @bot.command()

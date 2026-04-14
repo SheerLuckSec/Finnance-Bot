@@ -25,7 +25,7 @@ intents.guilds = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ============================================================
-#  MARKET REPORT SYSTEM (your original code)
+#  MARKET REPORT SYSTEM
 # ============================================================
 
 async def get_market_report():
@@ -62,11 +62,10 @@ async def get_market_report():
 @bot.event
 async def on_ready():
     print(f'Bot is ready. Logged in as {bot.user}')
-    bot.add_view(RoleView())        # role buttons (selection menu)
-    bot.add_view(VerifyView())      # verify button
-    bot.add_view(ChooseRolesView()) # "Choose your roles" button (persistent)
+    bot.add_view(RoleView())        
+    bot.add_view(VerifyView())      
+    bot.add_view(ChooseRolesView()) 
     daily_report.start()
-
 
 @tasks.loop(minutes=1)
 async def daily_report():
@@ -130,7 +129,7 @@ async def graph(ctx, asset: str):
 
 
 # ============================================================
-#  ONBOARDING SYSTEM (verification + roles + logging)
+#  ONBOARDING SYSTEM
 # ============================================================
 
 VERIFY_CHANNEL = "les-portes-chaudes"
@@ -164,7 +163,7 @@ async def log_action(guild, message):
 
 class VerifyButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label="Verify", style=discord.ButtonStyle.success, emoji="✅")
+        super().__init__(label="Verify", style=discord.ButtonStyle.success, emoji="✅", custom_id="verify_btn")
 
     async def callback(self, interaction: discord.Interaction):
         role = discord.utils.get(interaction.guild.roles, name=BASE_ROLE)
@@ -189,11 +188,16 @@ class VerifyView(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(VerifyButton())
 
-# ------------------ Role Buttons ------------------
+# ------------------ Role Buttons (WITH CUSTOM IDs) ------------------
 
 class RoleButton(discord.ui.Button):
     def __init__(self, role_name, emoji):
-        super().__init__(label=role_name, emoji=emoji, style=discord.ButtonStyle.primary)
+        super().__init__(
+            label=role_name,
+            emoji=emoji,
+            style=discord.ButtonStyle.primary,
+            custom_id=f"role_{role_name.lower()}"
+        )
         self.role_name = role_name
 
     async def callback(self, interaction: discord.Interaction):
@@ -214,7 +218,12 @@ class RoleButton(discord.ui.Button):
 
 class RemoveAllButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label="Remove All Roles", style=discord.ButtonStyle.danger, emoji="🗑️")
+        super().__init__(
+            label="Remove All Roles",
+            style=discord.ButtonStyle.danger,
+            emoji="🗑️",
+            custom_id="remove_all_roles"
+        )
 
     async def callback(self, interaction: discord.Interaction):
         for role_name in ROLE_OPTIONS.keys():
@@ -225,7 +234,7 @@ class RemoveAllButton(discord.ui.Button):
         await interaction.response.send_message("All optional roles removed.", ephemeral=True)
         await log_action(interaction.guild, f"{interaction.user} removed ALL optional roles.")
 
-# ------------------ Role Selection View (second rectangle) ------------------
+# ------------------ Role Selection View (HORIZONTAL LAYOUT) ------------------
 
 class RoleView(discord.ui.View):
     def __init__(self):
@@ -248,17 +257,17 @@ class RoleView(discord.ui.View):
         gaming.row = 0
         self.add_item(gaming)
 
-        # Row 1 — SoulsBornes centered under Gaming
+        # Row 1 — SoulsBornes centered
         souls = RoleButton("SoulsBornes", ROLE_OPTIONS["SoulsBornes"])
         souls.row = 1
         self.add_item(souls)
 
-        # Row 2 — Remove All Roles centered under everything
+        # Row 2 — Remove All Roles centered
         remove_all = RemoveAllButton()
         remove_all.row = 2
         self.add_item(remove_all)
 
-# ------------------ "Choose your roles" Button + View ------------------
+# ------------------ Choose Your Roles Button ------------------
 
 class ChooseRolesButton(discord.ui.Button):
     def __init__(self):
@@ -364,4 +373,3 @@ async def rolereset(ctx, member: discord.Member):
 # ============================================================
 
 bot.run(DISCORD_TOKEN)
-

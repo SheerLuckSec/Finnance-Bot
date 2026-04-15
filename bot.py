@@ -341,15 +341,22 @@ class ChooseRolesButton(discord.ui.Button):
         existing = state.get_menu(interaction.user.id)
 
         if existing:
-            await existing.edit(embed=embed, view=RoleView())
-        else:
-            await interaction.response.send_message(
-                embed=embed,
-                view=RoleView(),
-                ephemeral=True
-            )
-            msg = await interaction.original_response()
-            state.set_menu(interaction.user.id, msg)
+            try:
+                # Try editing the existing ephemeral message
+                await existing.edit(embed=embed, view=RoleView())
+                return
+            except:
+                # Message is stale or invalid — delete it
+                state.clear_menu(interaction.user.id)
+
+        # Create a new ephemeral message
+        await interaction.response.send_message(
+            embed=embed,
+            view=RoleView(),
+            ephemeral=True
+        )
+        msg = await interaction.original_response()
+        state.set_menu(interaction.user.id, msg)
 
 
 class ChooseRolesView(discord.ui.View):

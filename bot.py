@@ -201,6 +201,8 @@ class RoleButton(discord.ui.Button):
         self.role_name = role_name
 
     async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)  # prevents "interaction failed"
+
         role = discord.utils.get(interaction.guild.roles, name=self.role_name)
 
         if role in interaction.user.roles:
@@ -227,6 +229,8 @@ class RemoveAllButton(discord.ui.Button):
         )
     
     async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)  # prevents "interaction failed"
+
         for role_name in ROLE_OPTIONS.keys():
             role = discord.utils.get(interaction.guild.roles, name=role_name)
             if role and role in interaction.user.roles:
@@ -248,6 +252,7 @@ class BackToWelcomeButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         embed = build_welcome_embed()
         await interaction.response.edit_message(embed=embed, view=ChooseRolesView())
+
 
 
 # ------------------ Role Selection View (HORIZONTAL LAYOUT) ------------------

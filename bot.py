@@ -8,6 +8,25 @@ from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 import io
 
+# ============================================================
+#  STATE MANAGER FOR ONBOARDING (ONE EPHEMERAL MENU PER USER)
+# ============================================================
+
+class OnboardingState:
+    def __init__(self):
+        # user_id -> discord.Message (their ephemeral role menu)
+        self.role_menus = {}
+
+    def set_menu(self, user_id: int, message: discord.Message):
+        self.role_menus[user_id] = message
+
+    def get_menu(self, user_id: int) -> discord.Message | None:
+        return self.role_menus.get(user_id)
+
+    def clear_menu(self, user_id: int):
+        self.role_menus.pop(user_id, None)
+
+
 # Load environment variables
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -23,6 +42,7 @@ intents.members = True
 intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+bot.onboarding_state = OnboardingState()
 
 # ============================================================
 #  MARKET REPORT SYSTEM
@@ -251,8 +271,17 @@ class BackToWelcomeButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         embed = build_welcome_embed()
-        await interaction.response.edit_message(embed=embed, view=ChooseRolesView())
+        state: OnboardingState = interaction.client.onboarding_state
 
+        menu = state.get_menu(interaction.user.id)
+        if menu:
+            await menu.edit(embed=embed, view=ChooseRolesView())
+        else:
+            await interaction.response.send_message(
+                embed=embed,
+                view=ChooseRolesView(),
+                ephemeral=True
+            )
 
 
 # ------------------ Role Selection View (HORIZONTAL LAYOUT) ------------------
@@ -307,13 +336,20 @@ class ChooseRolesButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         embed = build_role_selection_embed()
+        state: OnboardingState = interaction.client.onboarding_state
 
-        # Acknowledge the interaction
-        await interaction.response.defer(ephemeral=True)
+        existing = state.get_menu(interaction.user.id)
 
-        # Always send a fresh ephemeral message
-        await interaction.followup.send(embed=embed, view=RoleView(), ephemeral=True)
-
+        if existing:
+            await existing.edit(embed=embed, view=RoleView())
+        else:
+            await interaction.response.send_message(
+                embed=embed,
+                view=RoleView(),
+                ephemeral=True
+            )
+            msg = await interaction.original_response()
+            state.set_menu(interaction.user.id, msg)
 
 
 class ChooseRolesView(discord.ui.View):

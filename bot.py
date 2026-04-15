@@ -224,7 +224,20 @@ class RemoveAllButton(discord.ui.Button):
             emoji="🗑️",
             custom_id="remove_all_roles"
         )
+class BackToWelcomeButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label="Back",
+            style=discord.ButtonStyle.secondary,
+            emoji="⬅️",
+            custom_id="back_to_welcome"
+        )
 
+    async def callback(self, interaction: discord.Interaction):
+        embed = build_welcome_embed()
+        await interaction.response.edit_message(embed=embed, view=ChooseRolesView())
+
+    
     async def callback(self, interaction: discord.Interaction):
         for role_name in ROLE_OPTIONS.keys():
             role = discord.utils.get(interaction.guild.roles, name=role_name)
@@ -266,6 +279,12 @@ class RoleView(discord.ui.View):
         remove_all = RemoveAllButton()
         remove_all.row = 2
         self.add_item(remove_all)
+
+        # Row 3 — Back button
+        back = BackToWelcomeButton()
+        back.row = 3
+        self.add_item(back)
+
 
 # ------------------ Choose Your Roles Button ------------------
 

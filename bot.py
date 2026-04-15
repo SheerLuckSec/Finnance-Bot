@@ -205,16 +205,17 @@ class RoleButton(discord.ui.Button):
 
         if role in interaction.user.roles:
             await interaction.user.remove_roles(role)
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"Removed **{self.role_name}**", ephemeral=True
             )
             await log_action(interaction.guild, f"{interaction.user} removed role {self.role_name}.")
         else:
             await interaction.user.add_roles(role)
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"Added **{self.role_name}**", ephemeral=True
             )
             await log_action(interaction.guild, f"{interaction.user} added role {self.role_name}.")
+
 
 class RemoveAllButton(discord.ui.Button):
     def __init__(self):
@@ -222,21 +223,8 @@ class RemoveAllButton(discord.ui.Button):
             label="Remove All Roles",
             style=discord.ButtonStyle.danger,
             emoji="🗑️",
-            custom_id="remove_all_roles"
+            custom_id="remove_all_roles_unique_001"
         )
-class BackToWelcomeButton(discord.ui.Button):
-    def __init__(self):
-        super().__init__(
-            label="Back",
-            style=discord.ButtonStyle.secondary,
-            emoji="⬅️",
-            custom_id="back_to_welcome"
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        embed = build_welcome_embed()
-        await interaction.response.edit_message(embed=embed, view=ChooseRolesView())
-
     
     async def callback(self, interaction: discord.Interaction):
         for role_name in ROLE_OPTIONS.keys():
@@ -244,8 +232,23 @@ class BackToWelcomeButton(discord.ui.Button):
             if role and role in interaction.user.roles:
                 await interaction.user.remove_roles(role)
 
-        await interaction.response.send_message("All optional roles removed.", ephemeral=True)
+        await interaction.followup.send("All optional roles removed.", ephemeral=True)
         await log_action(interaction.guild, f"{interaction.user} removed ALL optional roles.")
+
+
+class BackToWelcomeButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label="Back",
+            style=discord.ButtonStyle.secondary,
+            emoji="⬅️",
+            custom_id="back_to_welcome_unique_001"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        embed = build_welcome_embed()
+        await interaction.response.edit_message(embed=embed, view=ChooseRolesView())
+
 
 # ------------------ Role Selection View (HORIZONTAL LAYOUT) ------------------
 

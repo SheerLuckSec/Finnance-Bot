@@ -302,7 +302,14 @@ class ChooseRolesButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         embed = build_role_selection_embed()
-        await interaction.response.send_message(embed=embed, view=RoleView(), ephemeral=True)
+
+        # Try to edit the existing ephemeral message
+        try:
+            await interaction.response.edit_message(embed=embed, view=RoleView())
+        except:
+            # If it's the first time, create the ephemeral message
+            await interaction.response.send_message(embed=embed, view=RoleView(), ephemeral=True)
+
 
 class ChooseRolesView(discord.ui.View):
     def __init__(self):
